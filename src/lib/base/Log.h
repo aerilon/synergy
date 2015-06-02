@@ -23,6 +23,8 @@
 #include "common/common.h"
 #include "common/stdlist.h"
 
+#include <mutex>
+
 #include <stdarg.h>
 
 #define CLOG (Log::getInstance())
@@ -132,7 +134,7 @@ private:
 
 	static Log*		s_log;
 
-	ArchMutex			m_mutex;
+	mutable std::mutex			m_mutex;
 	OutputterList		m_outputters;
 	OutputterList		m_alwaysOutputters;
 	int					m_maxNewlineLength;
