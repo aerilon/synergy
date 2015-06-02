@@ -18,10 +18,11 @@
 
 #pragma once
 
+#include <mutex>
+
 #include "net/IListenSocket.h"
 #include "arch/IArchNetwork.h"
 
-class Mutex;
 class ISocketMultiplexerJob;
 class IEventQueue;
 class SocketMultiplexer;
@@ -55,7 +56,7 @@ public:
 
 protected:
 	ArchSocket			m_socket;
-	Mutex*				m_mutex;
+	std::mutex			m_mutex;
 	IEventQueue*		m_events;
 	SocketMultiplexer*	m_socketMultiplexer;
 };

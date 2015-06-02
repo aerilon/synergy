@@ -38,7 +38,6 @@ TCPListenSocket::TCPListenSocket(IEventQueue* events, SocketMultiplexer* socketM
 	m_events(events),
 	m_socketMultiplexer(socketMultiplexer)
 {
-	m_mutex = new Mutex;
 	try {
 		m_socket = ARCH->newSocket(IArchNetwork::kINET, IArchNetwork::kSTREAM);
 	}
@@ -58,14 +57,13 @@ TCPListenSocket::~TCPListenSocket()
 	catch (...) {
 		// ignore
 	}
-	delete m_mutex;
 }
 
 void
 TCPListenSocket::bind(const NetworkAddress& addr)
 {
 	try {
-		Lock lock(m_mutex);
+		std::lock_guard<std::mutex> lock(m_mutex);
 		ARCH->setReuseAddrOnSocket(m_socket, true);
 		ARCH->bindSocket(m_socket, addr.getAddress());
 		ARCH->listenOnSocket(m_socket);
@@ -85,7 +83,7 @@ TCPListenSocket::bind(const NetworkAddress& addr)
 void
 TCPListenSocket::close()
 {
-	Lock lock(m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 	if (m_socket == NULL) {
 		throw XIOClosed();
 	}
