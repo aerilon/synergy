@@ -131,9 +131,7 @@ ArchNetworkBSD::copySocket(ArchSocket s)
 	assert(s != NULL);
 
 	// ref the socket and return it
-	ARCH->lockMutex(m_mutex);
 	++s->m_refCount;
-	ARCH->unlockMutex(m_mutex);
 	return s;
 }
 
@@ -143,18 +141,14 @@ ArchNetworkBSD::closeSocket(ArchSocket s)
 	assert(s != NULL);
 
 	// unref the socket and note if it should be released
-	ARCH->lockMutex(m_mutex);
 	const bool doClose = (--s->m_refCount == 0);
-	ARCH->unlockMutex(m_mutex);
 
 	// close the socket if necessary
 	if (doClose) {
 		if (close(s->m_fd) == -1) {
 			// close failed.  restore the last ref and throw.
 			int err = errno;
-			ARCH->lockMutex(m_mutex);
 			++s->m_refCount;
-			ARCH->unlockMutex(m_mutex);
 			throwError(err);
 		}
 		delete s;

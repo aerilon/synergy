@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <atomic>
+
 #include "arch/IArchNetwork.h"
 #include "arch/IArchMultithread.h"
 
@@ -42,7 +44,7 @@ typedef char optval_t;
 class ArchSocketImpl {
 public:
 	int					m_fd;
-	int					m_refCount;
+	std::atomic<int>			m_refCount;
 };
 
 class ArchNetAddressImpl {
