@@ -181,7 +181,7 @@ public:
 	Blocks on the current thread until the event queue is ready for events to
 	be added.
 	*/
-	virtual void		waitForReady() const = 0;
+	virtual void		waitForReady() = 0;
 	
 	//@}
 	//! @name accessors

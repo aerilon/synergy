@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include "mt/CondVar.h"
 #include "arch/IArchMultithread.h"
 #include "base/IEventQueue.h"
 #include "base/Event.h"
@@ -28,8 +27,8 @@
 #include "common/stdset.h"
 
 #include <queue>
-
-class Mutex;
+#include <mutex>
+#include <condition_variable>
 
 //! Event queue
 /*!
@@ -64,7 +63,7 @@ public:
 	virtual Event::Type
 						getRegisteredType(const String& name) const;
 	void*				getSystemTarget();
-	virtual void		waitForReady() const;
+	virtual void		waitForReady();
 
 private:
 	UInt32				saveEvent(const Event& event);
@@ -177,8 +176,9 @@ private:
 	IKeyStateEvents*			m_typesForIKeyState;
 	IPrimaryScreenEvents*		m_typesForIPrimaryScreen;
 	IScreenEvents*				m_typesForIScreen;
-	Mutex*						m_readyMutex;
-	CondVar<bool>*				m_readyCondVar;
+	std::mutex					m_readyLock;
+	std::condition_variable		m_readyCondVar;
+	bool						m_readyFlag;
 	std::queue<Event>			m_pending;
 };
 

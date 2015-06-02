@@ -18,7 +18,6 @@
 
 #include "base/EventQueue.h"
 
-#include "mt/Mutex.h"
 #include "mt/Lock.h"
 #include "arch/Arch.h"
 #include "base/SimpleEventQueueBuffer.h"
@@ -81,36 +80,28 @@ EventQueue::EventQueue() :
 	m_typesForServerApp(NULL),
 	m_typesForIKeyState(NULL),
 	m_typesForIPrimaryScreen(NULL),
-	m_typesForIScreen(NULL),
-	m_readyMutex(new Mutex),
-	m_readyCondVar(new CondVar<bool>(m_readyMutex, false))
+	m_typesForIScreen(NULL)
 {
-	m_mutex = ARCH->newMutex();
 	ARCH->setSignalHandler(Arch::kINTERRUPT, &interrupt, this);
 	ARCH->setSignalHandler(Arch::kTERMINATE, &interrupt, this);
 	m_buffer = new SimpleEventQueueBuffer;
+	m_readyFlag = false;
 }
 
 EventQueue::~EventQueue()
 {
 	delete m_buffer;
-	delete m_readyCondVar;
-	delete m_readyMutex;
 	
 	ARCH->setSignalHandler(Arch::kINTERRUPT, NULL, NULL);
 	ARCH->setSignalHandler(Arch::kTERMINATE, NULL, NULL);
-	ARCH->closeMutex(m_mutex);
 }
 
 void
 EventQueue::loop()
 {
 	m_buffer->init();
-	{
-		Lock lock(m_readyMutex);
-		*m_readyCondVar = true;
-		m_readyCondVar->signal();
-	}
+	m_readyFlag = true;
+	m_readyCondVar.notify_all();
 	LOG((CLOG_DEBUG "event queue is ready"));
 	while (!m_pending.empty()) {
 		LOG((CLOG_DEBUG "add pending events to buffer"));
@@ -288,7 +279,7 @@ EventQueue::addEvent(const Event& event)
 		dispatchEvent(event);
 		Event::deleteData(event);
 	}
-	else if (!(*m_readyCondVar)) {
+	else if (!m_readyFlag) {
 		m_pending.push(event);
 	}
 	else {
@@ -556,16 +547,16 @@ EventQueue::getSystemTarget()
 }
 
 void
-EventQueue::waitForReady() const
+EventQueue::waitForReady()
 {
-	double timeout = ARCH->time() + 10;
-	Lock lock(m_readyMutex);
-	
-	while (!m_readyCondVar->wait()) {
-		if(ARCH->time() > timeout) {
-			throw std::runtime_error("event queue is not ready within 5 sec");
-		}
-	}
+
+	std::unique_lock<std::mutex> lock(m_readyLock);
+
+	bool status = m_readyCondVar.wait_for(lock,
+			std::chrono::seconds(10),
+			[&] { return m_readyFlag; });
+	if (!status)
+		throw std::runtime_error("event queue is not ready within 5 sec");
 }
 
 //
