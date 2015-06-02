@@ -111,7 +111,7 @@ private:
 	typedef std::map<void*, TypeHandlerTable> HandlerTable;
 
 	int					m_systemTarget;
-	ArchMutex			m_mutex;
+	mutable std::mutex			m_mutex;
 
 	// registered events
 	Event::Type		m_nextType;
