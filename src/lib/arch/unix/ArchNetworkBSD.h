@@ -19,6 +19,7 @@
 #pragma once
 
 #include <atomic>
+#include <mutex>
 
 #include "arch/IArchNetwork.h"
 #include "arch/IArchMultithread.h"
@@ -102,5 +103,5 @@ private:
 	void				throwNameError(int);
 
 private:
-	ArchMutex			m_mutex;
+	std::mutex			m_mutex;
 };

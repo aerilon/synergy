@@ -92,14 +92,11 @@ ArchNetworkBSD::ArchNetworkBSD()
 
 ArchNetworkBSD::~ArchNetworkBSD()
 {
-	ARCH->closeMutex(m_mutex);
 }
 
 void
 ArchNetworkBSD::init()
 {
-	// create mutex to make some calls thread safe
-	m_mutex = ARCH->newMutex();
 }
 
 ArchSocket
@@ -684,10 +681,10 @@ ArchNetworkBSD::nameToAddr(const std::string& name)
 
 	else {
 		// mutexed address lookup (ugh)
-		ARCH->lockMutex(m_mutex);
+		std::lock_guard<std::mutex> lock(m_mutex);
+
 		struct hostent* info = gethostbyname(name.c_str());
 		if (info == NULL) {
-			ARCH->unlockMutex(m_mutex);
 			delete addr;
 			throwNameError(h_errno);
 		}
@@ -702,15 +699,11 @@ ArchNetworkBSD::nameToAddr(const std::string& name)
 			memcpy(&addr->m_addr, &inaddr, addr->m_len);
 		}
 		else {
-			ARCH->unlockMutex(m_mutex);
 			delete addr;
 			throw XArchNetworkNameUnsupported(
 					"The requested name is valid but "
 					"does not have a supported address family");
 		}
-
-		// done with static buffer
-		ARCH->unlockMutex(m_mutex);
 	}
 
 	return addr;
@@ -730,20 +723,17 @@ ArchNetworkBSD::addrToName(ArchNetAddress addr)
 	assert(addr != NULL);
 
 	// mutexed name lookup (ugh)
-	ARCH->lockMutex(m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
+
 	struct hostent* info = gethostbyaddr(
 							reinterpret_cast<const char*>(&addr->m_addr),
 							addr->m_len, addr->m_addr.sa_family);
 	if (info == NULL) {
-		ARCH->unlockMutex(m_mutex);
 		throwNameError(h_errno);
 	}
 
 	// save (primary) name
 	std::string name = info->h_name;
-
-	// done with static buffer
-	ARCH->unlockMutex(m_mutex);
 
 	return name;
 }
@@ -757,9 +747,8 @@ ArchNetworkBSD::addrToString(ArchNetAddress addr)
 	case kINET: {
 		struct sockaddr_in* ipAddr =
 			reinterpret_cast<struct sockaddr_in*>(&addr->m_addr);
-		ARCH->lockMutex(m_mutex);
+		std::lock_guard<std::mutex> lock(m_mutex);
 		std::string s = inet_ntoa(ipAddr->sin_addr);
-		ARCH->unlockMutex(m_mutex);
 		return s;
 	}
 
