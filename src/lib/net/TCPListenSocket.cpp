@@ -24,8 +24,6 @@
 #include "net/TSocketMultiplexerMethodJob.h"
 #include "net/XSocket.h"
 #include "io/XIO.h"
-#include "mt/Lock.h"
-#include "mt/Mutex.h"
 #include "arch/Arch.h"
 #include "arch/XArch.h"
 #include "base/IEventQueue.h"

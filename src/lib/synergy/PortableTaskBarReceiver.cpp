@@ -17,7 +17,6 @@
  */
 
 #include "synergy/PortableTaskBarReceiver.h"
-#include "mt/Lock.h"
 #include "base/String.h"
 #include "base/IEventQueue.h"
 #include "arch/Arch.h"
