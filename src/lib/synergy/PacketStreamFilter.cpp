@@ -18,7 +18,6 @@
 
 #include "synergy/PacketStreamFilter.h"
 #include "base/IEventQueue.h"
-#include "mt/Lock.h"
 #include "base/TMethodEventJob.h"
 
 #include <cstring>
@@ -45,7 +44,7 @@ PacketStreamFilter::~PacketStreamFilter()
 void
 PacketStreamFilter::close()
 {
-	Lock lock(&m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 	m_size = 0;
 	m_buffer.pop(m_buffer.getSize());
 	StreamFilter::close();
@@ -58,7 +57,7 @@ PacketStreamFilter::read(void* buffer, UInt32 n)
 		return 0;
 	}
 
-	Lock lock(&m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 
 	// if not enough data yet then give up
 	if (!isReadyNoLock()) {
@@ -107,7 +106,7 @@ PacketStreamFilter::write(const void* buffer, UInt32 count)
 void
 PacketStreamFilter::shutdownInput()
 {
-	Lock lock(&m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 	m_size = 0;
 	m_buffer.pop(m_buffer.getSize());
 	StreamFilter::shutdownInput();
@@ -116,14 +115,14 @@ PacketStreamFilter::shutdownInput()
 bool
 PacketStreamFilter::isReady() const
 {
-	Lock lock(&m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 	return isReadyNoLock();
 }
 
 UInt32
 PacketStreamFilter::getSize() const
 {
-	Lock lock(&m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 	return isReadyNoLock() ? m_size : 0;
 }
 
@@ -179,14 +178,14 @@ void
 PacketStreamFilter::filterEvent(const Event& event)
 {
 	if (event.getType() == m_events->forIStream().inputReady()) {
-		Lock lock(&m_mutex);
+		std::lock_guard<std::mutex> lock(m_mutex);
 		if (!readMore()) {
 			return;
 		}
 	}
 	else if (event.getType() == m_events->forIStream().inputShutdown()) {
 		// discard this if we have buffered data
-		Lock lock(&m_mutex);
+		std::lock_guard<std::mutex> lock(m_mutex);
 		m_inputShutdown = true;
 		if (m_size != 0) {
 			return;
