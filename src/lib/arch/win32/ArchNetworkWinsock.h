@@ -22,6 +22,8 @@
 #define INCL_WINSOCK_API_PROTOTYPES 0
 #define INCL_WINSOCK_API_TYPEDEFS 0
 
+#include <atomic>
+
 #include "arch/IArchNetwork.h"
 #include "arch/IArchMultithread.h"
 
@@ -35,7 +37,7 @@
 class ArchSocketImpl {
 public:
 	SOCKET				m_socket;
-	int					m_refCount;
+	std::atomic<int>	m_refCount;
 	WSAEVENT			m_event;
 	bool				m_pollWrite;
 };

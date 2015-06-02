@@ -233,9 +233,7 @@ ArchNetworkWinsock::copySocket(ArchSocket s)
 	assert(s != NULL);
 
 	// ref the socket and return it
-	ARCH->lockMutex(m_mutex);
 	++s->m_refCount;
-	ARCH->unlockMutex(m_mutex);
 	return s;
 }
 
@@ -245,18 +243,14 @@ ArchNetworkWinsock::closeSocket(ArchSocket s)
 	assert(s != NULL);
 
 	// unref the socket and note if it should be released
-	ARCH->lockMutex(m_mutex);
 	const bool doClose = (--s->m_refCount == 0);
-	ARCH->unlockMutex(m_mutex);
 
 	// close the socket if necessary
 	if (doClose) {
 		if (close_winsock(s->m_socket) == SOCKET_ERROR) {
 			// close failed.  restore the last ref and throw.
 			int err = getsockerror_winsock();
-			ARCH->lockMutex(m_mutex);
 			++s->m_refCount;
-			ARCH->unlockMutex(m_mutex);
 			throwError(err);
 		}
 		WSACloseEvent_winsock(s->m_event);
