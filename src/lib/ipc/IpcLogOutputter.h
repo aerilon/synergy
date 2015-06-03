@@ -22,6 +22,7 @@
 #include "arch/IArchMultithread.h"
 #include "base/ILogOutputter.h"
 
+#include <condition_variable>
 #include <mutex>
 #include <queue>
 
@@ -65,8 +66,9 @@ private:
 	bool				m_sending;
 	Thread*			m_bufferThread;
 	bool				m_running;
-	ArchCond			m_notifyCond;
-	ArchMutex			m_notifyMutex;
+	std::condition_variable
+						m_notifyCond;
+	std::mutex			m_notifyMutex;
 	bool				m_bufferWaiting;
 	IArchMultithread::ThreadID
 						m_bufferThreadId;

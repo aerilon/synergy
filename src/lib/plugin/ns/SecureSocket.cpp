@@ -504,7 +504,7 @@ ISocketMultiplexerJob*
 SecureSocket::serviceConnect(ISocketMultiplexerJob* job,
 				bool, bool write, bool error)
 {
-	Lock lock(&getMutex());
+	std::lock_guard<std::mutex> lock(getMutex());
 
 	bool retry = true;
 #ifdef SYSAPI_WIN32
@@ -520,7 +520,7 @@ ISocketMultiplexerJob*
 SecureSocket::serviceAccept(ISocketMultiplexerJob* job,
 				bool, bool write, bool error)
 {
-	Lock lock(&getMutex());
+	std::lock_guard<std::mutex> lock(getMutex());
 
 	bool retry = true;
 #ifdef SYSAPI_WIN32

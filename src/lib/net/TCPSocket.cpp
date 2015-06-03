@@ -22,8 +22,6 @@
 #include "net/SocketMultiplexer.h"
 #include "net/TSocketMultiplexerMethodJob.h"
 #include "net/XSocket.h"
-#include "mt/Lock.h"
-#include "arch/Arch.h"
 #include "arch/XArch.h"
 #include "base/Log.h"
 #include "base/IEventQueue.h"
@@ -39,8 +37,7 @@
 
 TCPSocket::TCPSocket(IEventQueue* events, SocketMultiplexer* socketMultiplexer) :
 	IDataSocket(events),
-	m_mutex(),
-	m_flushed(&m_mutex, true),
+	m_flushed(true),
 	m_events(events),
 	m_socketMultiplexer(socketMultiplexer)
 {
@@ -56,9 +53,8 @@ TCPSocket::TCPSocket(IEventQueue* events, SocketMultiplexer* socketMultiplexer) 
 
 TCPSocket::TCPSocket(IEventQueue* events, SocketMultiplexer* socketMultiplexer, ArchSocket socket) :
 	IDataSocket(events),
-	m_mutex(),
 	m_socket(socket),
-	m_flushed(&m_mutex, true),
+	m_flushed(true),
 	m_events(events),
 	m_socketMultiplexer(socketMultiplexer)
 {
@@ -100,7 +96,7 @@ TCPSocket::close()
 	// remove ourself from the multiplexer
 	setJob(NULL);
 
-	Lock lock(&m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 
 	// clear buffers and enter disconnected state
 	if (m_connected) {
@@ -132,7 +128,7 @@ UInt32
 TCPSocket::read(void* buffer, UInt32 n)
 {
 	// copy data directly from our input buffer
-	Lock lock(&m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 	UInt32 size = m_inputBuffer.getSize();
 	if (n > size) {
 		n = size;
@@ -156,7 +152,7 @@ TCPSocket::write(const void* buffer, UInt32 n)
 {
 	bool wasEmpty;
 	{
-		Lock lock(&m_mutex);
+		std::lock_guard<std::mutex> lock(m_mutex);
 
 		// must not have shutdown output
 		if (!m_writable) {
@@ -186,10 +182,8 @@ TCPSocket::write(const void* buffer, UInt32 n)
 void
 TCPSocket::flush()
 {
-	Lock lock(&m_mutex);
-	while (m_flushed == false) {
-		m_flushed.wait();
-	}
+	std::unique_lock<std::mutex> lock(m_mutex);
+	m_flushedCond.wait(lock, [&] { return m_flushed; });
 }
 
 void
@@ -197,7 +191,7 @@ TCPSocket::shutdownInput()
 {
 	bool useNewJob = false;
 	{
-		Lock lock(&m_mutex);
+		std::lock_guard<std::mutex> lock(m_mutex);
 
 		// shutdown socket for reading
 		try {
@@ -224,7 +218,7 @@ TCPSocket::shutdownOutput()
 {
 	bool useNewJob = false;
 	{
-		Lock lock(&m_mutex);
+		std::lock_guard<std::mutex> lock(m_mutex);
 
 		// shutdown socket for writing
 		try {
@@ -249,14 +243,14 @@ TCPSocket::shutdownOutput()
 bool
 TCPSocket::isReady() const
 {
-	Lock lock(&m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 	return (m_inputBuffer.getSize() > 0);
 }
 
 UInt32
 TCPSocket::getSize() const
 {
-	Lock lock(&m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 	return m_inputBuffer.getSize();
 }
 
@@ -264,7 +258,7 @@ void
 TCPSocket::connect(const NetworkAddress& addr)
 {
 	{
-		Lock lock(&m_mutex);
+		std::lock_guard<std::mutex> lock(m_mutex);
 
 		// fail on attempts to reconnect
 		if (m_socket == NULL || m_connected) {
@@ -392,7 +386,7 @@ TCPSocket::onOutputShutdown()
 
 	// we're now flushed
 	m_flushed = true;
-	m_flushed.broadcast();
+	m_flushedCond.notify_all();
 }
 
 void
@@ -408,7 +402,7 @@ ISocketMultiplexerJob*
 TCPSocket::serviceConnecting(ISocketMultiplexerJob* job,
 				bool, bool write, bool error)
 {
-	Lock lock(&m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 
 	// should only check for errors if error is true but checking a new
 	// socket (and a socket that's connecting should be new) for errors
@@ -452,7 +446,7 @@ ISocketMultiplexerJob*
 TCPSocket::serviceConnected(ISocketMultiplexerJob* job,
 				bool read, bool write, bool error)
 {
-	Lock lock(&m_mutex);
+	std::lock_guard<std::mutex> lock(m_mutex);
 
 	if (error) {
 		sendEvent(m_events->forISocket().disconnected());
@@ -496,7 +490,7 @@ TCPSocket::serviceConnected(ISocketMultiplexerJob* job,
 				if (m_outputBuffer.getSize() == 0) {
 					sendEvent(m_events->forIStream().outputFlushed());
 					m_flushed = true;
-					m_flushed.broadcast();
+					m_flushedCond.notify_all();
 					needNewJob = true;
 				}
 			}

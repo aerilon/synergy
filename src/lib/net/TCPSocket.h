@@ -20,11 +20,11 @@
 
 #include "net/IDataSocket.h"
 #include "io/StreamBuffer.h"
-#include "mt/CondVar.h"
-#include "mt/Mutex.h"
 #include "arch/IArchNetwork.h"
 
-class Mutex;
+#include <condition_variable>
+#include <mutex>
+
 class Thread;
 class ISocketMultiplexerJob;
 class IEventQueue;
@@ -75,7 +75,7 @@ protected:
 	bool				isReadable() { return m_readable; }
 	bool				isWritable() { return m_writable; }
 
-	Mutex&				getMutex() { return m_mutex; }
+	std::mutex&			getMutex() { return m_mutex; }
 
 	void				sendEvent(Event::Type);
 
@@ -96,11 +96,13 @@ private:
 							bool, bool, bool);
 
 private:
-	Mutex				m_mutex;
+	mutable std::mutex	m_mutex;
 	ArchSocket			m_socket;
 	StreamBuffer		m_inputBuffer;
 	StreamBuffer		m_outputBuffer;
-	CondVar<bool>		m_flushed;
+	std::condition_variable
+						m_flushedCond;
+	bool				m_flushed;
 	bool				m_connected;
 	bool				m_readable;
 	bool				m_writable;

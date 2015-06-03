@@ -23,7 +23,6 @@
 #include "ipc/Ipc.h"
 #include "ipc/IpcClientProxy.h"
 #include "mt/Thread.h"
-#include "arch/Arch.h"
 #include "arch/XArch.h"
 #include "base/Event.h"
 #include "base/EventQueue.h"
@@ -37,8 +36,6 @@ IpcLogOutputter::IpcLogOutputter(IpcServer& ipcServer) :
 	m_ipcServer(ipcServer),
 	m_sending(false),
 	m_running(true),
-	m_notifyCond(ARCH->newCondVar()),
-	m_notifyMutex(ARCH->newMutex()),
 	m_bufferWaiting(false)
 {
 	m_bufferThread = new Thread(new TMethodJob<IpcLogOutputter>(
@@ -52,9 +49,6 @@ IpcLogOutputter::~IpcLogOutputter()
 	m_bufferThread->wait(5);
 
 	delete m_bufferThread;
-
-	ARCH->closeCondVar(m_notifyCond);
-	ARCH->closeMutex(m_notifyMutex);
 }
 
 void
@@ -111,7 +105,8 @@ IpcLogOutputter::appendBuffer(const String& text)
 void
 IpcLogOutputter::bufferThread(void*)
 {
-	ArchMutexLock lock(m_notifyMutex);
+	std::unique_lock<std::mutex> lock (m_notifyMutex);
+
 	m_bufferThreadId = m_bufferThread->getID();
 
 	try {
@@ -132,7 +127,7 @@ IpcLogOutputter::bufferThread(void*)
 			}
 
 			m_bufferWaiting = true;
-			ARCH->waitCondVar(m_notifyCond, m_notifyMutex, -1);
+			m_notifyCond.wait(lock);
 			m_bufferWaiting = false;
 		}
 	}
@@ -149,8 +144,7 @@ IpcLogOutputter::notifyBuffer()
 	if (!m_bufferWaiting) {
 		return;
 	}
-	ArchMutexLock lock(m_notifyMutex);
-	ARCH->broadcastCondVar(m_notifyCond);
+	m_notifyCond.notify_all();
 }
 
 String
