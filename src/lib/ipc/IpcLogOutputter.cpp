@@ -35,7 +35,6 @@
 
 IpcLogOutputter::IpcLogOutputter(IpcServer& ipcServer) :
 	m_ipcServer(ipcServer),
-	m_bufferMutex(ARCH->newMutex()),
 	m_sending(false),
 	m_running(true),
 	m_notifyCond(ARCH->newCondVar()),
@@ -52,7 +51,6 @@ IpcLogOutputter::~IpcLogOutputter()
 	notifyBuffer();
 	m_bufferThread->wait(5);
 
-	ARCH->closeMutex(m_bufferMutex);
 	delete m_bufferThread;
 
 	ARCH->closeCondVar(m_notifyCond);
@@ -106,7 +104,7 @@ IpcLogOutputter::write(ELevel, const char* text, bool force)
 void
 IpcLogOutputter::appendBuffer(const String& text)
 {
-	ArchMutexLock lock(m_bufferMutex);
+	std::lock_guard<std::mutex> lock(m_bufferMutex);
 	m_buffer.push(text);
 }
 
@@ -158,7 +156,7 @@ IpcLogOutputter::notifyBuffer()
 String
 IpcLogOutputter::getChunk(size_t count)
 {
-	ArchMutexLock lock(m_bufferMutex);
+	std::lock_guard<std::mutex> lock(m_bufferMutex);
 
 	if (m_buffer.size() < count) {
 		count = m_buffer.size();

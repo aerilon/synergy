@@ -22,6 +22,7 @@
 #include "arch/IArchMultithread.h"
 #include "base/ILogOutputter.h"
 
+#include <mutex>
 #include <queue>
 
 class IpcServer;
@@ -60,7 +61,7 @@ private:
 
 	IpcServer&			m_ipcServer;
 	Buffer				m_buffer;
-	ArchMutex			m_bufferMutex;
+	std::mutex			m_bufferMutex;
 	bool				m_sending;
 	Thread*			m_bufferThread;
 	bool				m_running;
