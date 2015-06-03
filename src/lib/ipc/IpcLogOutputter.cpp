@@ -34,13 +34,13 @@
 #define MAX_SEND 100
 
 IpcLogOutputter::IpcLogOutputter(IpcServer& ipcServer) :
-m_ipcServer(ipcServer),
-m_bufferMutex(ARCH->newMutex()),
-m_sending(false),
-m_running(true),
-m_notifyCond(ARCH->newCondVar()),
-m_notifyMutex(ARCH->newMutex()),
-m_bufferWaiting(false)
+	m_ipcServer(ipcServer),
+	m_bufferMutex(ARCH->newMutex()),
+	m_sending(false),
+	m_running(true),
+	m_notifyCond(ARCH->newCondVar()),
+	m_notifyMutex(ARCH->newMutex()),
+	m_bufferWaiting(false)
 {
 	m_bufferThread = new Thread(new TMethodJob<IpcLogOutputter>(
 		this, &IpcLogOutputter::bufferThread));
