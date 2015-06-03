@@ -240,15 +240,11 @@ SocketMultiplexer::serviceThread(void*)
 		}
 
 		// delete any removed socket jobs
-		for (SocketJobMap::iterator i = m_socketJobMap.begin();
-							i != m_socketJobMap.end();) {
-			if (*(i->second) == NULL) {
-				m_socketJobMap.erase(i++);
-				m_update = true;
-			}
-			else {
-				++i;
-			}
+		for (auto i = m_socketJobMap.begin(); i != m_socketJobMap.end(); i++) {
+			if (*(i->second) != NULL)
+				continue;
+			m_socketJobMap.erase(i);
+			m_update = true;
 		}
 
 		// unlock the job list
